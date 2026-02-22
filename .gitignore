@@ -1,0 +1,30 @@
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Logs
+*.log
+
+# Editor
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Generated
+src/routeTree.gen.ts

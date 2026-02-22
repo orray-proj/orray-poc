@@ -1,0 +1,440 @@
+import type { SystemNode, SystemEdge } from "./types";
+
+export const systemNodes: SystemNode[] = [
+  {
+    id: "gateway",
+    type: "system",
+    position: { x: 450, y: 0 },
+    data: {
+      label: "API Gateway",
+      kind: "gateway",
+      description: "Edge proxy handling auth, rate-limiting, and routing",
+      team: { name: "Platform", color: "#2dd4a8" },
+      features: [
+        { id: "gw-auth", name: "Auth Middleware", description: "JWT validation and session management", team: { name: "Platform", color: "#2dd4a8" }, status: "healthy" },
+        { id: "gw-rate", name: "Rate Limiter", description: "Per-client request throttling", team: { name: "Platform", color: "#2dd4a8" }, status: "healthy" },
+        { id: "gw-route", name: "Router", description: "Dynamic service routing", team: { name: "Platform", color: "#2dd4a8" }, status: "healthy" },
+      ],
+      tracing: { traceId: "trace-001", latencyMs: 2, status: "ok", spanId: "span-gw", timestamp: "2026-02-22T10:00:00Z" },
+      building: { isDraft: false },
+      platform: { cpu: 12, memory: 34, pods: { ready: 3, total: 3 }, health: "healthy", deploymentStatus: "running", version: "v2.8.1", lastDeploy: "2h ago", uptime: "14d 6h" },
+    },
+  },
+  {
+    id: "user-service",
+    type: "system",
+    position: { x: 100, y: 200 },
+    data: {
+      label: "User Service",
+      kind: "service",
+      description: "Authentication, profiles, and user management",
+      team: { name: "Identity", color: "#a78bfa" },
+      features: [
+        { id: "us-auth", name: "Authentication", description: "Login, signup, and OAuth flows", team: { name: "Identity", color: "#a78bfa" }, status: "healthy" },
+        { id: "us-profile", name: "Profile Management", description: "User profile CRUD operations", team: { name: "Identity", color: "#a78bfa" }, status: "healthy" },
+        { id: "us-perms", name: "Permissions", description: "RBAC and permission checking", team: { name: "Identity", color: "#a78bfa" }, status: "healthy" },
+      ],
+      tracing: { traceId: "trace-001", latencyMs: 8, status: "ok", spanId: "span-us", timestamp: "2026-02-22T10:00:00Z" },
+      building: { isDraft: false },
+      platform: { cpu: 18, memory: 42, pods: { ready: 2, total: 2 }, health: "healthy", deploymentStatus: "running", version: "v1.14.0", lastDeploy: "1d ago", uptime: "7d 2h" },
+    },
+  },
+  {
+    id: "product-catalog",
+    type: "system",
+    position: { x: 800, y: 200 },
+    data: {
+      label: "Product Catalog",
+      kind: "service",
+      description: "Product listings, search, and categorization",
+      team: { name: "Catalog", color: "#f0b429" },
+      features: [
+        { id: "pc-search", name: "Search Engine", description: "Full-text product search with filters", team: { name: "Catalog", color: "#f0b429" }, status: "healthy" },
+        { id: "pc-crud", name: "Product CRUD", description: "Create, read, update, delete products", team: { name: "Catalog", color: "#f0b429" }, status: "healthy" },
+        { id: "pc-cat", name: "Categorization", description: "Taxonomy and tagging system", team: { name: "Catalog", color: "#f0b429" }, status: "healthy" },
+      ],
+      tracing: { traceId: "trace-001", latencyMs: 15, status: "ok", spanId: "span-pc", timestamp: "2026-02-22T10:00:01Z" },
+      building: { isDraft: false },
+      platform: { cpu: 35, memory: 58, pods: { ready: 3, total: 3 }, health: "healthy", deploymentStatus: "running", version: "v3.2.0", lastDeploy: "3h ago", uptime: "21d 0h" },
+    },
+  },
+  {
+    id: "order-service",
+    type: "system",
+    position: { x: 450, y: 400 },
+    data: {
+      label: "Order Service",
+      kind: "service",
+      description: "Order lifecycle management and orchestration",
+      team: { name: "Commerce", color: "#00d4ff" },
+      features: [
+        { id: "os-create", name: "Order Creation", description: "Validates and creates new orders", team: { name: "Commerce", color: "#00d4ff" }, status: "healthy" },
+        { id: "os-status", name: "Status Tracking", description: "Order status state machine", team: { name: "Commerce", color: "#00d4ff" }, status: "healthy" },
+        { id: "os-fulfill", name: "Fulfillment", description: "Orchestrates fulfillment workflow", team: { name: "Commerce", color: "#00d4ff" }, status: "warning" },
+      ],
+      tracing: { traceId: "trace-001", latencyMs: 45, status: "ok", spanId: "span-os", timestamp: "2026-02-22T10:00:01Z" },
+      building: { isDraft: false },
+      platform: { cpu: 52, memory: 71, pods: { ready: 4, total: 4 }, health: "healthy", deploymentStatus: "running", version: "v4.1.2", lastDeploy: "30m ago", uptime: "3d 8h" },
+    },
+  },
+  {
+    id: "payment-service",
+    type: "system",
+    position: { x: 150, y: 600 },
+    data: {
+      label: "Payment Service",
+      kind: "service",
+      description: "Payment processing, refunds, and billing",
+      team: { name: "Payments", color: "#ff3355" },
+      features: [
+        { id: "ps-charge", name: "Charge Processing", description: "Credit card and wallet charges", team: { name: "Payments", color: "#ff3355" }, status: "critical" },
+        { id: "ps-refund", name: "Refunds", description: "Partial and full refund processing", team: { name: "Payments", color: "#ff3355" }, status: "healthy" },
+        { id: "ps-webhook", name: "Provider Webhooks", description: "Stripe/PayPal webhook handling", team: { name: "Payments", color: "#ff3355" }, status: "critical" },
+      ],
+      tracing: { traceId: "trace-001", latencyMs: 12034, status: "error", spanId: "span-ps", timestamp: "2026-02-22T10:00:02Z", errorMessage: "Upstream timeout: Stripe API unresponsive (12.03s)" },
+      building: { isDraft: false },
+      platform: { cpu: 89, memory: 82, pods: { ready: 2, total: 4 }, health: "critical", deploymentStatus: "running", version: "v2.0.3", lastDeploy: "2d ago", uptime: "2d 4h" },
+    },
+  },
+  {
+    id: "inventory-service",
+    type: "system",
+    position: { x: 750, y: 600 },
+    data: {
+      label: "Inventory Service",
+      kind: "service",
+      description: "Stock management, reservations, and warehouse tracking",
+      team: { name: "Supply Chain", color: "#34d399" },
+      features: [
+        { id: "is-stock", name: "Stock Levels", description: "Real-time inventory tracking", team: { name: "Supply Chain", color: "#34d399" }, status: "healthy" },
+        { id: "is-reserve", name: "Reservations", description: "Stock reservation for pending orders", team: { name: "Supply Chain", color: "#34d399" }, status: "healthy" },
+        { id: "is-warehouse", name: "Warehouse Sync", description: "WMS integration and sync", team: { name: "Supply Chain", color: "#34d399" }, status: "degraded" },
+      ],
+      tracing: { traceId: "trace-001", latencyMs: 22, status: "ok", spanId: "span-is", timestamp: "2026-02-22T10:00:01Z" },
+      building: { isDraft: false },
+      platform: { cpu: 28, memory: 45, pods: { ready: 2, total: 2 }, health: "degraded", deploymentStatus: "running", version: "v1.8.7", lastDeploy: "5d ago", uptime: "5d 1h" },
+    },
+  },
+  {
+    id: "notification-service",
+    type: "system",
+    position: { x: 450, y: 800 },
+    data: {
+      label: "Notification Service",
+      kind: "service",
+      description: "Email, SMS, and push notification delivery",
+      team: { name: "Comms", color: "#f472b6" },
+      features: [
+        { id: "ns-email", name: "Email Sender", description: "Transactional email via SendGrid", team: { name: "Comms", color: "#f472b6" }, status: "healthy" },
+        { id: "ns-push", name: "Push Notifications", description: "Mobile push via FCM/APNs", team: { name: "Comms", color: "#f472b6" }, status: "healthy" },
+        { id: "ns-sms", name: "SMS Gateway", description: "SMS delivery via Twilio", team: { name: "Comms", color: "#f472b6" }, status: "healthy" },
+      ],
+      tracing: { traceId: "trace-001", latencyMs: 0, status: "warning", spanId: "span-ns", timestamp: "2026-02-22T10:00:14Z" },
+      building: { isDraft: false },
+      platform: { cpu: 8, memory: 22, pods: { ready: 2, total: 2 }, health: "healthy", deploymentStatus: "running", version: "v1.3.0", lastDeploy: "1w ago", uptime: "12d 3h" },
+    },
+  },
+  // Databases
+  {
+    id: "users-db",
+    type: "system",
+    position: { x: -100, y: 100 },
+    data: {
+      label: "Users DB",
+      kind: "database",
+      description: "PostgreSQL — user accounts, sessions, roles",
+      building: { isDraft: false },
+      platform: { cpu: 15, memory: 60, pods: { ready: 1, total: 1 }, health: "healthy", deploymentStatus: "running", version: "PostgreSQL 16.2", lastDeploy: "30d ago", uptime: "30d 0h" },
+    },
+  },
+  {
+    id: "products-db",
+    type: "system",
+    position: { x: 1050, y: 100 },
+    data: {
+      label: "Products DB",
+      kind: "database",
+      description: "PostgreSQL — product catalog, categories, pricing",
+      building: { isDraft: false },
+      platform: { cpu: 42, memory: 75, pods: { ready: 1, total: 1 }, health: "healthy", deploymentStatus: "running", version: "PostgreSQL 16.2", lastDeploy: "30d ago", uptime: "30d 0h" },
+    },
+  },
+  {
+    id: "orders-db",
+    type: "system",
+    position: { x: 450, y: 580 },
+    data: {
+      label: "Orders DB",
+      kind: "database",
+      description: "PostgreSQL — orders, line items, transactions",
+      building: { isDraft: false },
+      platform: { cpu: 55, memory: 68, pods: { ready: 1, total: 1 }, health: "healthy", deploymentStatus: "running", version: "PostgreSQL 16.2", lastDeploy: "30d ago", uptime: "30d 0h" },
+    },
+  },
+  // Cache
+  {
+    id: "cache",
+    type: "system",
+    position: { x: 1050, y: 350 },
+    data: {
+      label: "Redis Cache",
+      kind: "cache",
+      description: "Redis — session cache, product search cache, rate-limit counters",
+      building: { isDraft: false },
+      platform: { cpu: 5, memory: 88, pods: { ready: 1, total: 1 }, health: "healthy", deploymentStatus: "running", version: "Redis 7.4", lastDeploy: "60d ago", uptime: "60d 0h" },
+    },
+  },
+  // Queue
+  {
+    id: "event-bus",
+    type: "system",
+    position: { x: 150, y: 800 },
+    data: {
+      label: "Event Bus",
+      kind: "queue",
+      description: "Kafka — domain events, payment confirmations, order updates",
+      building: { isDraft: false },
+      platform: { cpu: 20, memory: 55, pods: { ready: 3, total: 3 }, health: "healthy", deploymentStatus: "running", version: "Kafka 3.7", lastDeploy: "14d ago", uptime: "14d 0h" },
+    },
+  },
+];
+
+export const systemEdges: SystemEdge[] = [
+  // Gateway → Services
+  {
+    id: "gw-us",
+    source: "gateway",
+    target: "user-service",
+    type: "dataflow",
+    data: {
+      label: "Auth check",
+      protocol: "gRPC",
+      dataType: "AuthRequest",
+      tracing: { active: true, latencyMs: 2, status: "ok", throughput: "1.2k rps" },
+      platform: { requestsPerSec: 1200, errorRate: 0.01, p99Latency: 8 },
+    },
+  },
+  {
+    id: "gw-pc",
+    source: "gateway",
+    target: "product-catalog",
+    type: "dataflow",
+    data: {
+      label: "Product queries",
+      protocol: "REST",
+      dataType: "SearchRequest",
+      tracing: { active: true, latencyMs: 5, status: "ok", throughput: "3.4k rps" },
+      platform: { requestsPerSec: 3400, errorRate: 0.02, p99Latency: 45 },
+    },
+  },
+  {
+    id: "gw-os",
+    source: "gateway",
+    target: "order-service",
+    type: "dataflow",
+    data: {
+      label: "Order commands",
+      protocol: "REST",
+      dataType: "OrderRequest",
+      tracing: { active: true, latencyMs: 3, status: "ok", throughput: "800 rps" },
+      platform: { requestsPerSec: 800, errorRate: 0.15, p99Latency: 120 },
+    },
+  },
+  // Service → DB
+  {
+    id: "us-db",
+    source: "user-service",
+    target: "users-db",
+    type: "dataflow",
+    data: {
+      label: "User queries",
+      protocol: "TCP",
+      dataType: "SQL",
+      tracing: { active: false, status: "inactive" },
+      platform: { requestsPerSec: 800, errorRate: 0, p99Latency: 3 },
+    },
+  },
+  {
+    id: "pc-db",
+    source: "product-catalog",
+    target: "products-db",
+    type: "dataflow",
+    data: {
+      label: "Product queries",
+      protocol: "TCP",
+      dataType: "SQL",
+      tracing: { active: false, status: "inactive" },
+      platform: { requestsPerSec: 2500, errorRate: 0, p99Latency: 5 },
+    },
+  },
+  {
+    id: "pc-cache",
+    source: "product-catalog",
+    target: "cache",
+    type: "dataflow",
+    data: {
+      label: "Cache lookup",
+      protocol: "TCP",
+      dataType: "Redis CMD",
+      tracing: { active: false, status: "inactive" },
+      platform: { requestsPerSec: 5000, errorRate: 0, p99Latency: 1 },
+    },
+  },
+  {
+    id: "os-db",
+    source: "order-service",
+    target: "orders-db",
+    type: "dataflow",
+    data: {
+      label: "Order persistence",
+      protocol: "TCP",
+      dataType: "SQL",
+      tracing: { active: true, latencyMs: 4, status: "ok" },
+      platform: { requestsPerSec: 600, errorRate: 0.01, p99Latency: 8 },
+    },
+  },
+  // Order → Payment (error path)
+  {
+    id: "os-ps",
+    source: "order-service",
+    target: "payment-service",
+    type: "dataflow",
+    data: {
+      label: "Charge request",
+      protocol: "gRPC",
+      dataType: "ChargeRequest",
+      tracing: { active: true, latencyMs: 12034, status: "error", throughput: "200 rps" },
+      platform: { requestsPerSec: 200, errorRate: 45.2, p99Latency: 15000 },
+    },
+  },
+  // Order → Inventory
+  {
+    id: "os-is",
+    source: "order-service",
+    target: "inventory-service",
+    type: "dataflow",
+    data: {
+      label: "Stock check",
+      protocol: "gRPC",
+      dataType: "StockQuery",
+      tracing: { active: true, latencyMs: 8, status: "ok", throughput: "400 rps" },
+      platform: { requestsPerSec: 400, errorRate: 0.5, p99Latency: 35 },
+    },
+  },
+  // Inventory → Products DB
+  {
+    id: "is-pdb",
+    source: "inventory-service",
+    target: "products-db",
+    type: "dataflow",
+    data: {
+      label: "Stock sync",
+      protocol: "TCP",
+      dataType: "SQL",
+      tracing: { active: false, status: "inactive" },
+      platform: { requestsPerSec: 150, errorRate: 0, p99Latency: 4 },
+    },
+  },
+  // Payment → Event Bus
+  {
+    id: "ps-eb",
+    source: "payment-service",
+    target: "event-bus",
+    type: "dataflow",
+    data: {
+      label: "Payment events",
+      protocol: "Kafka",
+      dataType: "PaymentEvent",
+      tracing: { active: true, latencyMs: 0, status: "error" },
+      platform: { requestsPerSec: 180, errorRate: 45.2, p99Latency: 50 },
+    },
+  },
+  // Event Bus → Notification
+  {
+    id: "eb-ns",
+    source: "event-bus",
+    target: "notification-service",
+    type: "dataflow",
+    data: {
+      label: "Notify triggers",
+      protocol: "Kafka",
+      dataType: "NotificationEvent",
+      tracing: { active: true, latencyMs: 0, status: "warning" },
+      platform: { requestsPerSec: 500, errorRate: 0.1, p99Latency: 200 },
+    },
+  },
+];
+
+export const draftNodes: SystemNode[] = [
+  {
+    id: "recommendation-engine",
+    type: "system",
+    position: { x: 1050, y: 550 },
+    data: {
+      label: "Recommendation Engine",
+      kind: "service",
+      description: "ML-powered product recommendations based on user behavior",
+      team: { name: "ML", color: "#c084fc" },
+      building: { isDraft: true, proposedBy: "Sarah Chen", ticketId: "PLAT-1042", description: "Phase 2: personalized recommendations using collaborative filtering" },
+    },
+  },
+  {
+    id: "analytics-service",
+    type: "system",
+    position: { x: -100, y: 600 },
+    data: {
+      label: "Analytics Service",
+      kind: "service",
+      description: "Business intelligence, funnel analytics, and reporting",
+      team: { name: "Data", color: "#fb923c" },
+      building: { isDraft: true, proposedBy: "Marco Rossi", ticketId: "PLAT-987", description: "Central analytics pipeline for all domain events" },
+    },
+  },
+];
+
+export const draftEdges: SystemEdge[] = [
+  {
+    id: "pc-rec",
+    source: "product-catalog",
+    target: "recommendation-engine",
+    type: "ghost",
+    data: {
+      label: "Product data feed",
+      protocol: "gRPC",
+      building: { isDraft: true },
+    },
+  },
+  {
+    id: "rec-cache",
+    source: "recommendation-engine",
+    target: "cache",
+    type: "ghost",
+    data: {
+      label: "Rec cache write",
+      protocol: "TCP",
+      building: { isDraft: true },
+    },
+  },
+  {
+    id: "eb-analytics",
+    source: "event-bus",
+    target: "analytics-service",
+    type: "ghost",
+    data: {
+      label: "All domain events",
+      protocol: "Kafka",
+      building: { isDraft: true },
+    },
+  },
+  {
+    id: "gw-rec",
+    source: "gateway",
+    target: "recommendation-engine",
+    type: "ghost",
+    data: {
+      label: "Rec queries",
+      protocol: "REST",
+      building: { isDraft: true },
+    },
+  },
+];
