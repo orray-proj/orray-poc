@@ -17,7 +17,6 @@ import { SystemNodeComponent } from "./nodes/SystemNode";
 import { DataFlowEdge } from "./edges/DataFlowEdge";
 import { GhostEdge } from "./edges/GhostEdge";
 import { CanvasHeader } from "./CanvasHeader";
-import { LayerSwitcher } from "../layers/LayerSwitcher";
 import { NodeDetailPanel } from "../panels/NodeDetailPanel";
 import { BuildingToolbar } from "../panels/BuildingToolbar";
 import type { SystemNodeData } from "@/data/types";
@@ -118,13 +117,13 @@ export function SystemCanvas() {
           nodeColor={() => "oklch(0.40 0.03 270)"}
           maskColor="oklch(0.08 0.01 270 / 0.85)"
           className="!bottom-4 !left-4"
+          style={{ width: 160, height: 110 }}
           pannable
           zoomable
         />
       </ReactFlow>
 
       <CanvasHeader />
-      <LayerSwitcher />
       <BuildingToolbar />
       {selectedNode && (
         <NodeDetailPanel
