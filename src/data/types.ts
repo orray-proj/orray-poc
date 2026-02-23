@@ -78,6 +78,8 @@ export interface SystemEdgeData {
     p99Latency?: number;
   };
   protocol?: string;
+  /** Individual topic names for multi-topic connections (e.g. Kafka). */
+  topics?: string[];
 
   tracing?: {
     active: boolean;

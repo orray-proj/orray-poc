@@ -1,4 +1,11 @@
-import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
+import {
+  Handle,
+  type Node,
+  type NodeProps,
+  Position,
+  useReactFlow,
+  useViewport,
+} from "@xyflow/react";
 import {
   Activity,
   AlertCircle,
@@ -16,9 +23,20 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import type { HealthStatus, NodeKind, SystemNodeData } from "@/data/types";
+import type {
+  HealthStatus,
+  NodeKind,
+  ServiceFeature,
+  SystemNodeData,
+} from "@/data/types";
 import { cn } from "@/lib/utils";
+import {
+  ZOOM_CUE_MIN,
+  ZOOM_EXIT_CUE_RANGE,
+  ZOOM_EXPAND_MIN,
+} from "@/lib/zoom-constants";
 import { useLayerStore } from "@/stores/layer-store";
 
 const kindConfig: Record<
@@ -258,6 +276,45 @@ function PlatformOverlay({ data }: { data: SystemNodeData }) {
   );
 }
 
+function getFeatureStatusDot(status: HealthStatus): string {
+  if (status === "healthy") {
+    return "bg-emerald-400";
+  }
+  if (status === "warning") {
+    return "bg-amber-400";
+  }
+  if (status === "degraded") {
+    return "bg-amber-500";
+  }
+  if (status === "critical") {
+    return "bg-red-400";
+  }
+  return "bg-zinc-500";
+}
+
+function FeatureGrid({ features }: { features: ServiceFeature[] }) {
+  return (
+    <div className="mt-2.5 grid grid-cols-2 gap-1 border-border/25 border-t pt-2.5">
+      {features.map((f) => (
+        <div
+          className="flex items-center gap-1.5 rounded-md bg-white/[0.04] px-2 py-1.5 ring-1 ring-white/[0.06]"
+          key={f.id}
+        >
+          <span
+            className={cn(
+              "h-1.5 w-1.5 shrink-0 rounded-full",
+              getFeatureStatusDot(f.status)
+            )}
+          />
+          <span className="min-w-0 truncate font-mono text-[10px] text-foreground/70 leading-none">
+            {f.name}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type SystemNodeType = Node<SystemNodeData>;
 
 interface NodeFlags {
@@ -342,22 +399,141 @@ function NodeStatusIcon({
   return null;
 }
 
+/** Derives the container className for the node outer div. */
+function getNodeContainerClass(
+  flags: NodeFlags,
+  isCued: boolean,
+  isExpanded: boolean,
+  isExitCue: boolean,
+  isOtherExpanded: boolean,
+  selected: boolean
+): string {
+  const { isDraft, isError, isCritical, dimmed } = flags;
+  return cn(
+    "relative rounded-lg border transition-all duration-500",
+    "bg-card/80 backdrop-blur-sm",
+    isExpanded ? "w-[340px]" : "w-[220px]",
+    // Enter cue: outer glow + slight scale signals the node is about to open.
+    isCued &&
+      "scale-[1.05] border-[oklch(0.6_0.18_220_/_0.6)] shadow-[0_0_0_2px_oklch(0.6_0.18_220_/_0.5),0_0_28px_oklch(0.6_0.18_220_/_0.18)]",
+    // Exit cue: breathing pulse nudges "zoom out a little more to leave focus mode".
+    isExitCue && "animate-[exit-cue-pulse_1.5s_ease-in-out_infinite]",
+    // Expanded (stable): static glow to anchor the focused node when not in exit cue.
+    isExpanded &&
+      !isExitCue &&
+      "shadow-[0_0_0_1px_oklch(0.6_0.18_220_/_0.3),0_0_48px_oklch(0.6_0.18_220_/_0.15)]",
+    // Focus mode: other nodes retreat to near-invisible.
+    isOtherExpanded && "pointer-events-none opacity-[0.06]",
+    selected && "ring-1 ring-ring",
+    isDraft &&
+      "animate-[ghost-shimmer_3s_ease-in-out_infinite] border-layer-building/40 border-dashed bg-layer-building/5",
+    isError &&
+      "animate-[error-pulse_2s_ease-in-out_infinite] border-layer-error/50",
+    isCritical &&
+      "border-red-500/40 shadow-[0_0_16px_oklch(0.65_0.25_15_/_0.2)]",
+    !(isDraft || isError || isCritical || isCued || isExpanded) &&
+      "border-border/60",
+    dimmed && "opacity-30"
+  );
+}
+
+/** Returns true when a tracing-layer node is not part of the active trace path. */
+function isNodeDimmed(
+  activeLayer: string,
+  isOnTracePath: boolean,
+  kind: NodeKind
+): boolean {
+  return (
+    activeLayer === "tracing" &&
+    !isOnTracePath &&
+    kind !== "database" &&
+    kind !== "cache" &&
+    kind !== "queue"
+  );
+}
+
+/**
+ * Computes the semantic zoom state for a node and manages the "expanded" lifecycle:
+ * - tracks cue / expanded states from viewport zoom + hover
+ * - on first expansion: registers the node as focused and pans the viewport to center it
+ * - on collapse: clears the focus if this node was the focused one
+ *
+ * Extracted to keep SystemNodeComponent within the cognitive-complexity limit.
+ */
+function useSemanticZoom(id: string, hasFeatures: boolean) {
+  const { zoom } = useViewport();
+  const rf = useReactFlow();
+  const hoveredNodeId = useLayerStore((s) => s.hoveredNodeId);
+  const expandedNodeId = useLayerStore((s) => s.expandedNodeId);
+  const setExpandedNodeId = useLayerStore((s) => s.setExpandedNodeId);
+
+  const isHovered = hoveredNodeId === id;
+  // Sticky: once locked in the store, stays expanded even after mouse leaves.
+  const isLocked = expandedNodeId === id;
+  const isCued = isHovered && zoom >= ZOOM_CUE_MIN && zoom < ZOOM_EXPAND_MIN;
+  const isExpanded =
+    isLocked || (isHovered && zoom >= ZOOM_EXPAND_MIN && hasFeatures);
+  // Exit cue: locked node inside the slow-exit zone — breathing pulse nudges the user.
+  const isExitCue =
+    isLocked &&
+    zoom >= ZOOM_EXPAND_MIN &&
+    zoom < ZOOM_EXPAND_MIN + ZOOM_EXIT_CUE_RANGE;
+
+  useEffect(() => {
+    // Lock: node enters expanded state while hovered.
+    if (!isLocked && isHovered && zoom >= ZOOM_EXPAND_MIN && hasFeatures) {
+      setExpandedNodeId(id);
+
+      // Pan to center the expanding node (zoom preserved to avoid threshold feedback).
+      const node = rf.getNode(id);
+      if (!node) {
+        return;
+      }
+      const { zoom: currentZoom } = rf.getViewport();
+      const expandedW = 340;
+      const expandedH = (node.measured?.height ?? 160) + 80;
+      const vpW = window.innerWidth;
+      const vpH = window.innerHeight;
+      rf.setViewport(
+        {
+          x: vpW / 2 - (node.position.x + expandedW / 2) * currentZoom,
+          y: vpH / 2 - (node.position.y + expandedH / 2) * currentZoom,
+          zoom: currentZoom,
+        },
+        { duration: 550 }
+      );
+      return;
+    }
+
+    // Unlock: user zoomed out below the expand threshold.
+    if (isLocked && zoom < ZOOM_EXPAND_MIN) {
+      setExpandedNodeId(null);
+    }
+  }, [isHovered, isLocked, zoom, hasFeatures, id, setExpandedNodeId, rf]);
+
+  return { isCued, isExpanded, isExitCue };
+}
+
 export function SystemNodeComponent({
+  id,
   data,
   selected,
 }: NodeProps<SystemNodeType>) {
   const activeLayer = useLayerStore((s) => s.activeLayer);
+
   const isDraft = data.building?.isDraft ?? false;
   const isError = data.tracing?.status === "error" && activeLayer === "tracing";
-  const isOnTracePath = data.tracing && activeLayer === "tracing";
+  const isOnTracePath = Boolean(data.tracing && activeLayer === "tracing");
   const isCritical =
     data.platform?.health === "critical" && activeLayer === "platform";
-  const dimmed =
-    activeLayer === "tracing" &&
-    !isOnTracePath &&
-    data.kind !== "database" &&
-    data.kind !== "cache" &&
-    data.kind !== "queue";
+  const dimmed = isNodeDimmed(activeLayer, isOnTracePath, data.kind);
+
+  const hasFeatures = (data.features?.length ?? 0) > 0;
+  const { isCued, isExpanded, isExitCue } = useSemanticZoom(id, hasFeatures);
+
+  // True when a *different* node is expanded — triggers focus-mode dimming.
+  const expandedNodeId = useLayerStore((s) => s.expandedNodeId);
+  const isOtherExpanded = expandedNodeId !== null && expandedNodeId !== id;
 
   const config = kindConfig[data.kind];
   const Icon = config.icon;
@@ -371,18 +547,13 @@ export function SystemNodeComponent({
         type="target"
       />
       <div
-        className={cn(
-          "relative w-[220px] rounded-lg border transition-all duration-500",
-          "bg-card/80 backdrop-blur-sm",
-          selected && "ring-1 ring-ring",
-          isDraft &&
-            "animate-[ghost-shimmer_3s_ease-in-out_infinite] border-layer-building/40 border-dashed bg-layer-building/5",
-          isError &&
-            "animate-[error-pulse_2s_ease-in-out_infinite] border-layer-error/50",
-          isCritical &&
-            "border-red-500/40 shadow-[0_0_16px_oklch(0.65_0.25_15_/_0.2)]",
-          !(isDraft || isError || isCritical) && "border-border/60",
-          dimmed && "opacity-30"
+        className={getNodeContainerClass(
+          flags,
+          isCued,
+          isExpanded,
+          isExitCue,
+          isOtherExpanded,
+          selected
         )}
       >
         <NodeAccentStripe config={config} flags={flags} />
@@ -429,6 +600,10 @@ export function SystemNodeComponent({
           {activeLayer === "tracing" && <TracingOverlay data={data} />}
           {activeLayer === "building" && <BuildingOverlay data={data} />}
           {activeLayer === "platform" && <PlatformOverlay data={data} />}
+
+          {isExpanded && data.features && (
+            <FeatureGrid features={data.features} />
+          )}
         </div>
       </div>
       <Handle

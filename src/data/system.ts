@@ -587,6 +587,55 @@ export const systemEdges: SystemEdge[] = [
       platform: { requestsPerSec: 600, errorRate: 0.01, p99Latency: 8 },
     },
   },
+  // Order → Event Bus (domain events)
+  {
+    id: "os-eb",
+    source: "order-service",
+    target: "event-bus",
+    type: "dataflow",
+    data: {
+      label: "Order events",
+      protocol: "Kafka",
+      dataType: "OrderEvent",
+      topics: [
+        "order.created",
+        "order.updated",
+        "order.cancelled",
+        "order.fulfilled",
+      ],
+      tracing: {
+        active: true,
+        latencyMs: 0,
+        status: "ok",
+        throughput: "600 rps",
+      },
+      platform: { requestsPerSec: 600, errorRate: 0.05, p99Latency: 20 },
+    },
+  },
+  // Inventory → Event Bus
+  {
+    id: "is-eb",
+    source: "inventory-service",
+    target: "event-bus",
+    type: "dataflow",
+    data: {
+      label: "Inventory events",
+      protocol: "Kafka",
+      dataType: "InventoryEvent",
+      topics: [
+        "inventory.updated",
+        "reservation.created",
+        "reservation.released",
+      ],
+      tracing: {
+        active: true,
+        latencyMs: 0,
+        status: "ok",
+        throughput: "300 rps",
+      },
+      platform: { requestsPerSec: 300, errorRate: 0.0, p99Latency: 15 },
+    },
+  },
   // Order → Payment (error path)
   {
     id: "os-ps",
@@ -649,6 +698,7 @@ export const systemEdges: SystemEdge[] = [
       label: "Payment events",
       protocol: "Kafka",
       dataType: "PaymentEvent",
+      topics: ["payment.charged", "payment.failed", "payment.refunded"],
       tracing: { active: true, latencyMs: 0, status: "error" },
       platform: { requestsPerSec: 180, errorRate: 45.2, p99Latency: 50 },
     },
@@ -663,6 +713,7 @@ export const systemEdges: SystemEdge[] = [
       label: "Notify triggers",
       protocol: "Kafka",
       dataType: "NotificationEvent",
+      topics: ["order.confirmed", "payment.charged", "shipment.dispatched"],
       tracing: { active: true, latencyMs: 0, status: "warning" },
       platform: { requestsPerSec: 500, errorRate: 0.1, p99Latency: 200 },
     },
