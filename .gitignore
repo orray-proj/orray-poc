@@ -19,7 +19,6 @@ dist/
 *.log
 
 # Editor
-.vscode/
 *.swp
 *.swo
 
