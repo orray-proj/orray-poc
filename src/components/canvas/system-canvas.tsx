@@ -14,7 +14,7 @@ import {
 import { AnimatePresence } from "motion/react";
 import { useEffect, useRef } from "react";
 import "@xyflow/react/dist/style.css";
-import type { SystemNodeData } from "@/data/types";
+import type { SystemEdge, SystemNodeData } from "@/data/types";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useLayerStore } from "@/stores/layer-store";
 import { BuildingToolbar } from "../panels/building-toolbar";
@@ -22,7 +22,7 @@ import { NodeDetailPanel } from "../panels/node-detail-panel";
 import { CanvasHeader } from "./canvas-header";
 import { DataFlowEdge } from "./edges/data-flow-edge";
 import { GhostEdge } from "./edges/ghost-edge";
-import { FocusModeOverlay } from "./focus-overlay";
+import { CARD_H, CARD_W, FocusModeOverlay } from "./focus-overlay";
 import { SystemNodeComponent } from "./nodes/system-node";
 import { ZoomController } from "./zoom-controller";
 
@@ -37,6 +37,28 @@ const bgColors = {
   building: "oklch(0.80 0.16 80 / 0.10)",
   platform: "oklch(0.77 0.15 165 / 0.12)",
 } as const;
+
+/** Computes angle from focused node center to each neighbor center. */
+function buildNeighborAngles(
+  allNodes: Node[],
+  neighborIds: string[],
+  fx: number,
+  fy: number
+): Record<string, number> {
+  const angles: Record<string, number> = {};
+  for (const n of allNodes) {
+    if (!neighborIds.includes(n.id)) {
+      continue;
+    }
+    const nw = n.measured?.width ?? 220;
+    const nh = n.measured?.height ?? 160;
+    angles[n.id] = Math.atan2(
+      n.position.y + nh / 2 - fy,
+      n.position.x + nw / 2 - fx
+    );
+  }
+  return angles;
+}
 
 /**
  * Projects a node's angle onto the viewport boundary rectangle and returns
@@ -72,8 +94,10 @@ function scatterPosition(
  * nodes peek visibly from the edges.
  */
 function FocusController({
+  setEdges,
   setNodes,
 }: {
+  setEdges: (updater: (eds: SystemEdge[]) => SystemEdge[]) => void;
   setNodes: ReturnType<typeof useNodesState<SystemNodeType>>[1];
 }) {
   const rf = useReactFlow();
@@ -81,26 +105,59 @@ function FocusController({
   const setFocusModeNeighborIds = useLayerStore(
     (s) => s.setFocusModeNeighborIds
   );
+  const setFocusModeNeighborAngles = useLayerStore(
+    (s) => s.setFocusModeNeighborAngles
+  );
   // originalPositionsRef: true pre-focus positions, set once per node when first scattered.
   // Never overwritten on node switches so exit always restores correctly.
   const originalPositionsRef = useRef<Record<string, { x: number; y: number }>>(
     {}
   );
+  // Saves the focused node's original position/style so we can restore them on exit.
+  const focusedNodeStateRef = useRef<{
+    id: string;
+    position: { x: number; y: number };
+    style: SystemNodeType["style"];
+  } | null>(null);
   const prevFocusModeRef = useRef(focusModeNodeId);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: setNodes and rf are stable RF instances
+  // biome-ignore lint/correctness/useExhaustiveDependencies: setNodes, setEdges and rf are stable RF instances
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: scatter/restore algorithm is inherently branchy
   useEffect(() => {
     if (focusModeNodeId === null) {
-      // Capture positions before clearing the ref — the setNodes updater runs
-      // asynchronously during React's reconciliation, by which point .current
-      // would already be {} if we cleared it first.
+      // Capture before clearing — setNodes updater runs asynchronously.
       const savedPositions = originalPositionsRef.current;
+      const savedFocused = focusedNodeStateRef.current;
+      const savedFocusedId = savedFocused?.id;
       originalPositionsRef.current = {};
+      focusedNodeStateRef.current = null;
       setNodes((nds) =>
-        nds.map((n) =>
-          savedPositions[n.id] ? { ...n, position: savedPositions[n.id] } : n
-        )
+        nds.map((n) => {
+          if (savedFocused && n.id === savedFocused.id) {
+            return {
+              ...n,
+              position: savedFocused.position,
+              style: savedFocused.style,
+            };
+          }
+          if (savedPositions[n.id]) {
+            return { ...n, position: savedPositions[n.id] };
+          }
+          return n;
+        })
       );
+      // Restore edge handles to default (clear port handle IDs).
+      if (savedFocusedId) {
+        setEdges((eds) =>
+          eds.map((e) => {
+            if (e.source === savedFocusedId || e.target === savedFocusedId) {
+              return { ...e, sourceHandle: undefined, targetHandle: undefined };
+            }
+            return e;
+          })
+        );
+      }
+      setFocusModeNeighborAngles(null);
       return;
     }
 
@@ -120,6 +177,24 @@ function FocusController({
     // Viewport half-dimensions in flow coordinates (after centering on focused node).
     const halfW = window.innerWidth / zoom / 2;
     const halfH = window.innerHeight / zoom / 2;
+
+    // Save focused node's original state (first visit only).
+    if (
+      !focusedNodeStateRef.current ||
+      focusedNodeStateRef.current.id !== focusModeNodeId
+    ) {
+      focusedNodeStateRef.current = {
+        id: focusModeNodeId,
+        position: { ...focusedNode.position },
+        style: focusedNode.style,
+      };
+    }
+
+    // Card dimensions in flow units — node wrapper will match overlay card exactly.
+    const cardFlowW = CARD_W / zoom;
+    const cardFlowH = CARD_H / zoom;
+    const cardFlowX = fx - cardFlowW / 2;
+    const cardFlowY = fy - cardFlowH / 2;
 
     const newPositions: Record<string, { x: number; y: number }> = {};
 
@@ -147,11 +222,20 @@ function FocusController({
     }
 
     setNodes((nds) =>
-      nds.map((n) =>
-        n.id === focusModeNodeId || !newPositions[n.id]
-          ? n
-          : { ...n, position: newPositions[n.id] }
-      )
+      nds.map((n) => {
+        if (n.id === focusModeNodeId) {
+          // Resize focused node to match overlay card so handles sit on card border.
+          return {
+            ...n,
+            position: { x: cardFlowX, y: cardFlowY },
+            style: { ...n.style, width: cardFlowW, height: cardFlowH },
+          };
+        }
+        if (!newPositions[n.id]) {
+          return n;
+        }
+        return { ...n, position: newPositions[n.id] };
+      })
     );
 
     // Compute neighbor IDs (nodes directly connected to the focused node).
@@ -162,6 +246,24 @@ function FocusController({
       )
       .map((e) => (e.source === focusModeNodeId ? e.target : e.source));
     setFocusModeNeighborIds(neighborIds);
+
+    // Compute angle from focused node center to each neighbor center.
+    setFocusModeNeighborAngles(
+      buildNeighborAngles(allNodes, neighborIds, fx, fy)
+    );
+
+    // Route edges to per-neighbor port handles so they terminate at border points.
+    setEdges((eds) =>
+      eds.map((e) => {
+        if (e.source === focusModeNodeId) {
+          return { ...e, sourceHandle: `src-${e.target}` };
+        }
+        if (e.target === focusModeNodeId) {
+          return { ...e, targetHandle: `tgt-${e.source}` };
+        }
+        return e;
+      })
+    );
 
     // Pan viewport to center focused node (simultaneously with scatter animation).
     rf.setViewport(
@@ -200,6 +302,7 @@ export function SystemCanvas() {
   const isMountedRef = useRef(false);
 
   // Add .focus-transitioning class during scatter/restore so CSS can animate edge paths.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: focusModeNodeId intentionally triggers this effect
   useEffect(() => {
     if (!isMountedRef.current) {
       isMountedRef.current = true;
@@ -264,6 +367,7 @@ export function SystemCanvas() {
           maxZoom={4}
           minZoom={0.2}
           nodes={nodes}
+          nodesDraggable={activeLayer === "building"}
           nodeTypes={nodeTypes}
           onEdgesChange={onEdgesChange}
           onNodeMouseEnter={onNodeMouseEnter}
@@ -271,7 +375,6 @@ export function SystemCanvas() {
           onNodesChange={onNodesChange}
           onPaneClick={onPaneClick}
           onSelectionChange={onSelectionChange}
-          nodesDraggable={activeLayer === "building"}
           panOnDrag={!isInFocusMode}
           panOnScroll={!isInFocusMode}
           proOptions={proOptions}
@@ -298,7 +401,7 @@ export function SystemCanvas() {
             zoomable
           />
           <ZoomController />
-          <FocusController setNodes={setNodes} />
+          <FocusController setEdges={setEdges} setNodes={setNodes} />
         </ReactFlow>
       </div>
 

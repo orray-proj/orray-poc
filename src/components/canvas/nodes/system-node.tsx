@@ -23,6 +23,12 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { Fragment } from "react";
+import {
+  CARD_H,
+  CARD_W,
+  cardBorderPoint,
+} from "@/components/canvas/focus-overlay";
 import { Badge } from "@/components/ui/badge";
 import type {
   HealthStatus,
@@ -478,6 +484,30 @@ function getNodeContainerClass(
   );
 }
 
+interface PortHandle {
+  leftPct: number;
+  neighborId: string;
+  topPct: number;
+}
+
+/** Computes per-neighbor port handles when a node is in focus mode. */
+function buildPortHandles(
+  isFocused: boolean,
+  neighborAngles: Record<string, number> | null
+): PortHandle[] | null {
+  if (!(isFocused && neighborAngles)) {
+    return null;
+  }
+  return Object.entries(neighborAngles).map(([neighborId, angle]) => {
+    const pt = cardBorderPoint(angle);
+    return {
+      neighborId,
+      leftPct: (pt.x / CARD_W) * 100,
+      topPct: (pt.y / CARD_H) * 100,
+    };
+  });
+}
+
 /** Returns true when a tracing-layer node is not part of the active trace path. */
 function isNodeDimmed(
   activeLayer: string,
@@ -493,6 +523,7 @@ function isNodeDimmed(
   );
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: JSX branching across layers is inherently complex
 export function SystemNodeComponent({
   id,
   data,
@@ -516,6 +547,9 @@ export function SystemNodeComponent({
   const dimmed = isNodeDimmed(activeLayer, isOnTracePath, data.kind);
 
   const focusModeNeighborIds = useLayerStore((s) => s.focusModeNeighborIds);
+  const focusModeNeighborAngles = useLayerStore(
+    (s) => s.focusModeNeighborAngles
+  );
   const isFocused = focusModeNodeId === id;
   const isScattered = focusModeNodeId !== null && !isFocused;
   const isNeighbor =
@@ -529,13 +563,36 @@ export function SystemNodeComponent({
   const Icon = config.icon;
   const flags: NodeFlags = { isDraft, isError, isCritical, dimmed };
 
+  // Compute per-port handles when focused (one source + one target per neighbor at border point).
+  const portHandles = buildPortHandles(isFocused, focusModeNeighborAngles);
+
   return (
     <>
-      <Handle
-        className="!bg-border !border-surface !w-2 !h-2"
-        position={Position.Top}
-        type="target"
-      />
+      {portHandles ? (
+        // Per-neighbor handles for precise edge routing in focus mode.
+        portHandles.map(({ neighborId, leftPct, topPct }) => (
+          <Fragment key={neighborId}>
+            <Handle
+              id={`src-${neighborId}`}
+              position={Position.Top}
+              style={{ left: `${leftPct}%`, top: `${topPct}%`, opacity: 0 }}
+              type="source"
+            />
+            <Handle
+              id={`tgt-${neighborId}`}
+              position={Position.Top}
+              style={{ left: `${leftPct}%`, top: `${topPct}%`, opacity: 0 }}
+              type="target"
+            />
+          </Fragment>
+        ))
+      ) : (
+        <Handle
+          className="!bg-border !border-surface !w-2 !h-2"
+          position={Position.Top}
+          type="target"
+        />
+      )}
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions lint/a11y/noStaticElementInteractions: React Flow requires a div as node root; role/keyboard attrs added when interactive */}
       <div
         className={getNodeContainerClass(
@@ -625,11 +682,13 @@ export function SystemNodeComponent({
           {activeLayer === "platform" && <PlatformOverlay data={data} />}
         </div>
       </div>
-      <Handle
-        className="!bg-border !border-surface !w-2 !h-2"
-        position={Position.Bottom}
-        type="source"
-      />
+      {!portHandles && (
+        <Handle
+          className="!bg-border !border-surface !w-2 !h-2"
+          position={Position.Bottom}
+          type="source"
+        />
+      )}
     </>
   );
 }

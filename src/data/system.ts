@@ -12,6 +12,7 @@ export const systemNodes: SystemNode[] = [
       team: { name: "Platform", color: "#2dd4a8" },
       features: [
         {
+          connectedNodeIds: ["user-service"],
           id: "gw-auth",
           name: "Auth Middleware",
           description: "JWT validation and session management",
@@ -19,6 +20,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: [],
           id: "gw-rate",
           name: "Rate Limiter",
           description: "Per-client request throttling",
@@ -26,6 +28,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: ["order-service", "product-catalog"],
           id: "gw-route",
           name: "Router",
           description: "Dynamic service routing",
@@ -64,6 +67,7 @@ export const systemNodes: SystemNode[] = [
       team: { name: "Identity", color: "#a78bfa" },
       features: [
         {
+          connectedNodeIds: ["gateway"],
           id: "us-auth",
           name: "Authentication",
           description: "Login, signup, and OAuth flows",
@@ -71,6 +75,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: [],
           id: "us-profile",
           name: "Profile Management",
           description: "User profile CRUD operations",
@@ -78,6 +83,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: ["gateway"],
           id: "us-perms",
           name: "Permissions",
           description: "RBAC and permission checking",
@@ -116,6 +122,7 @@ export const systemNodes: SystemNode[] = [
       team: { name: "Catalog", color: "#f0b429" },
       features: [
         {
+          connectedNodeIds: ["gateway", "cache"],
           id: "pc-search",
           name: "Search Engine",
           description: "Full-text product search with filters",
@@ -123,6 +130,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: [],
           id: "pc-crud",
           name: "Product CRUD",
           description: "Create, read, update, delete products",
@@ -130,6 +138,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: [],
           id: "pc-cat",
           name: "Categorization",
           description: "Taxonomy and tagging system",
@@ -168,6 +177,7 @@ export const systemNodes: SystemNode[] = [
       team: { name: "Commerce", color: "#00d4ff" },
       features: [
         {
+          connectedNodeIds: ["gateway"],
           id: "os-create",
           name: "Order Creation",
           description: "Validates and creates new orders",
@@ -175,6 +185,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: [],
           id: "os-status",
           name: "Status Tracking",
           description: "Order status state machine",
@@ -182,6 +193,12 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: [
+            "orders-db",
+            "event-bus",
+            "payment-service",
+            "inventory-service",
+          ],
           id: "os-fulfill",
           name: "Fulfillment",
           description: "Orchestrates fulfillment workflow",
@@ -220,6 +237,7 @@ export const systemNodes: SystemNode[] = [
       team: { name: "Payments", color: "#ff3355" },
       features: [
         {
+          connectedNodeIds: ["order-service"],
           id: "ps-charge",
           name: "Charge Processing",
           description: "Credit card and wallet charges",
@@ -227,6 +245,7 @@ export const systemNodes: SystemNode[] = [
           status: "critical",
         },
         {
+          connectedNodeIds: [],
           id: "ps-refund",
           name: "Refunds",
           description: "Partial and full refund processing",
@@ -234,6 +253,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: ["event-bus"],
           id: "ps-webhook",
           name: "Provider Webhooks",
           description: "Stripe/PayPal webhook handling",
@@ -273,6 +293,7 @@ export const systemNodes: SystemNode[] = [
       team: { name: "Supply Chain", color: "#34d399" },
       features: [
         {
+          connectedNodeIds: ["order-service"],
           id: "is-stock",
           name: "Stock Levels",
           description: "Real-time inventory tracking",
@@ -280,6 +301,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: [],
           id: "is-reserve",
           name: "Reservations",
           description: "Stock reservation for pending orders",
@@ -287,6 +309,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: ["products-db"],
           id: "is-warehouse",
           name: "Warehouse Sync",
           description: "WMS integration and sync",
@@ -325,6 +348,7 @@ export const systemNodes: SystemNode[] = [
       team: { name: "Comms", color: "#f472b6" },
       features: [
         {
+          connectedNodeIds: ["event-bus"],
           id: "ns-email",
           name: "Email Sender",
           description: "Transactional email via SendGrid",
@@ -332,6 +356,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: ["event-bus"],
           id: "ns-push",
           name: "Push Notifications",
           description: "Mobile push via FCM/APNs",
@@ -339,6 +364,7 @@ export const systemNodes: SystemNode[] = [
           status: "healthy",
         },
         {
+          connectedNodeIds: ["event-bus"],
           id: "ns-sms",
           name: "SMS Gateway",
           description: "SMS delivery via Twilio",

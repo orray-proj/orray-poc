@@ -3,7 +3,7 @@ import {
   type Edge,
   EdgeLabelRenderer,
   type EdgeProps,
-  getBezierPath,
+  getSmoothStepPath,
 } from "@xyflow/react";
 import { motion } from "motion/react";
 import type { SystemEdgeData } from "@/data/types";
@@ -109,7 +109,7 @@ function EdgeLabel({
   return (
     <div
       className={cn(
-        "pointer-events-all nodrag nopan absolute edge-label",
+        "pointer-events-all nodrag nopan edge-label absolute",
         "rounded px-2 py-0.5 font-mono text-[9px]",
         "border border-border/50 bg-card/90 backdrop-blur-sm",
         "text-muted-foreground",
@@ -140,7 +140,7 @@ function EdgeMetrics({
   const errorRate = platform.errorRate ?? 0;
   return (
     <div
-      className="pointer-events-all nodrag nopan absolute edge-label rounded border border-border/40 bg-card/90 px-2 py-1 font-mono text-[9px] backdrop-blur-sm"
+      className="pointer-events-all nodrag nopan edge-label absolute rounded border border-border/40 bg-card/90 px-2 py-1 font-mono text-[9px] backdrop-blur-sm"
       style={{
         transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
       }}
@@ -185,13 +185,14 @@ export function DataFlowEdge({
     focusModeNodeId !== null &&
     (source === focusModeNodeId || target === focusModeNodeId);
   const isFocusModeDimmed = focusModeNodeId !== null && !isFocusModeEdge;
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     targetX,
     targetY,
     sourcePosition,
     targetPosition,
+    borderRadius: 6,
   });
 
   const tracing = data?.tracing;

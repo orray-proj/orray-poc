@@ -18,6 +18,7 @@ export interface TeamInfo {
 }
 
 export interface ServiceFeature {
+  connectedNodeIds?: string[];
   description: string;
   id: string;
   name: string;
