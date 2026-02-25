@@ -124,6 +124,20 @@ body,
   transition: transform 0.6s cubic-bezier(0.32, 0, 0.67, 0);
 }
 
+/* Edge path transitions */
+.react-flow__edge-path {
+  transition: stroke 0.5s, opacity 0.5s, stroke-width 0.3s;
+}
+
+/* During focus enter/exit: also morph edge paths and labels to follow node animation */
+.focus-transitioning .react-flow__edge-path {
+  transition: d 0.6s cubic-bezier(0.32, 0, 0.67, 0), stroke 0.5s, opacity 0.5s, stroke-width 0.3s;
+}
+
+.focus-transitioning .edge-label {
+  transition: transform 0.6s cubic-bezier(0.32, 0, 0.67, 0);
+}
+
 .react-flow__background {
   background-color: var(--background) !important;
 }

@@ -196,6 +196,28 @@ export function SystemCanvas() {
   const exitFocusMode = useLayerStore((s) => s.exitFocusMode);
 
   const isInFocusMode = focusModeNodeId !== null;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(false);
+
+  // Add .focus-transitioning class during scatter/restore so CSS can animate edge paths.
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) {
+      return;
+    }
+    el.classList.add("focus-transitioning");
+    const timer = setTimeout(() => {
+      el.classList.remove("focus-transitioning");
+    }, 700);
+    return () => {
+      clearTimeout(timer);
+      el.classList.remove("focus-transitioning");
+    };
+  }, [focusModeNodeId]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(
     useLayerStore.getState().getNodes()
@@ -230,7 +252,7 @@ export function SystemCanvas() {
     | undefined;
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full" ref={containerRef}>
       <div className="h-full w-full">
         <ReactFlow
           className="!bg-background"
@@ -249,6 +271,7 @@ export function SystemCanvas() {
           onNodesChange={onNodesChange}
           onPaneClick={onPaneClick}
           onSelectionChange={onSelectionChange}
+          nodesDraggable={activeLayer === "building"}
           panOnDrag={!isInFocusMode}
           panOnScroll={!isInFocusMode}
           proOptions={proOptions}

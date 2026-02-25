@@ -5,6 +5,7 @@ import {
   type EdgeProps,
   getBezierPath,
 } from "@xyflow/react";
+import { motion } from "motion/react";
 import type { SystemEdgeData } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { useLayerStore } from "@/stores/layer-store";
@@ -48,6 +49,8 @@ function getErrorRateClass(errorRate: number): string {
   return "text-emerald-400";
 }
 
+const FLOW_TRANSITION = { duration: 0.6, ease: [0.32, 0, 0.67, 0] as const };
+
 function EdgeFlowIndicator({
   edgePath,
   strokeColor,
@@ -61,27 +64,29 @@ function EdgeFlowIndicator({
 }) {
   if (isError) {
     return (
-      <path
+      <motion.path
+        animate={{ d: edgePath }}
         className="animate-[trace-flow_0.5s_linear_infinite]"
-        d={edgePath}
         fill="none"
         stroke="oklch(0.65 0.25 15)"
         strokeDasharray="4 8"
         strokeWidth={3}
         style={{ opacity: 0.4 }}
+        transition={FLOW_TRANSITION}
       />
     );
   }
   if (isTraceActive) {
     return (
-      <path
+      <motion.path
+        animate={{ d: edgePath }}
         className="animate-[trace-flow_1s_linear_infinite]"
-        d={edgePath}
         fill="none"
         stroke={strokeColor}
         strokeDasharray="6 6"
         strokeWidth={2}
         style={{ opacity: 0.6 }}
+        transition={FLOW_TRANSITION}
       />
     );
   }
@@ -104,7 +109,7 @@ function EdgeLabel({
   return (
     <div
       className={cn(
-        "pointer-events-all nodrag nopan absolute",
+        "pointer-events-all nodrag nopan absolute edge-label",
         "rounded px-2 py-0.5 font-mono text-[9px]",
         "border border-border/50 bg-card/90 backdrop-blur-sm",
         "text-muted-foreground",
@@ -135,7 +140,7 @@ function EdgeMetrics({
   const errorRate = platform.errorRate ?? 0;
   return (
     <div
-      className="pointer-events-all nodrag nopan absolute rounded border border-border/40 bg-card/90 px-2 py-1 font-mono text-[9px] backdrop-blur-sm"
+      className="pointer-events-all nodrag nopan absolute edge-label rounded border border-border/40 bg-card/90 px-2 py-1 font-mono text-[9px] backdrop-blur-sm"
       style={{
         transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
       }}
@@ -228,7 +233,6 @@ export function DataFlowEdge({
           stroke: strokeColor,
           strokeWidth: isTraceActive || selected ? 2 : 1.5,
           opacity: edgeOpacity(isFocusModeDimmed, dimmed),
-          transition: "stroke 0.5s, opacity 0.5s, stroke-width 0.3s",
           ...focusDrawStyle,
         }}
       />
