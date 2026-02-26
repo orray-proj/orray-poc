@@ -495,13 +495,12 @@ export function FocusModeOverlay({
 
   return (
     <div className="pointer-events-none fixed inset-0 z-50">
-      {/* Faint backdrop */}
+      {/* Faint backdrop — pointer-events-none so clicks reach scattered nodes below */}
       <motion.div
         animate={{ opacity: 1 }}
-        className="pointer-events-auto absolute inset-0"
+        className="pointer-events-none absolute inset-0"
         exit={{ opacity: 0 }}
         initial={{ opacity: 0 }}
-        onClick={onExit}
         style={{ background: "oklch(0.07 0.01 240 / 0.42)" }}
         transition={{ duration: 0.25 }}
       />

@@ -378,7 +378,14 @@ export function SystemCanvas() {
     setHoveredNodeId(null);
   };
 
-  const onPaneClick = () => setSelectedNodeId(null);
+  // Clicking the empty canvas dismisses focus mode (if active) or clears selection.
+  const onPaneClick = () => {
+    if (isInFocusMode) {
+      exitFocusMode();
+    } else {
+      setSelectedNodeId(null);
+    }
+  };
 
   // In building mode (dev only): persist all node positions to system.ts after each drag.
   const onNodeDragStop: OnNodeDrag = () => {
