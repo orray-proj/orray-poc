@@ -1,4 +1,10 @@
-import type { SystemEdge, SystemNode, TimelineEvent } from "./types";
+import type {
+  GitBranch,
+  GitCommit,
+  SystemEdge,
+  SystemNode,
+  TimelineEvent,
+} from "./types";
 
 export const systemNodes: SystemNode[] = [
   {
@@ -883,6 +889,138 @@ export const timelineEvents: TimelineEvent[] = [
     affectedNodeIds: ["user-service", "users-db", "gateway"],
     affectedEdgeIds: ["gw-us", "us-db"],
     severity: "low",
+  },
+];
+
+export const gitBranches: GitBranch[] = [
+  {
+    color: "oklch(0.52 0.11 165)",
+    name: "main",
+  },
+  {
+    color: "oklch(0.58 0.15 232)",
+    mergeTimestamp: "2026-02-22T09:20:00Z",
+    name: "feat/retry-logic",
+    originTimestamp: "2026-02-19T09:00:00Z",
+  },
+  {
+    color: "oklch(0.72 0.14 60)",
+    name: "feat/rec-engine",
+    originTimestamp: "2026-02-16T10:00:00Z",
+  },
+];
+
+export const gitCommits: GitCommit[] = [
+  {
+    author: "kai",
+    branch: "main",
+    eventId: "tl-001",
+    message: "chore: upgrade Kafka to v3.8",
+    serviceIds: ["event-bus"],
+    sha: "a1b2c3",
+    timestamp: "2026-02-14T10:00:00Z",
+  },
+  {
+    author: "marco",
+    branch: "main",
+    message: "fix: event-bus consumer group timeout",
+    serviceIds: ["event-bus"],
+    sha: "d4e5f6",
+    timestamp: "2026-02-15T14:30:00Z",
+  },
+  {
+    author: "priya",
+    branch: "feat/rec-engine",
+    eventId: "tl-004",
+    message: "feat: recommendation engine scaffold",
+    serviceIds: ["recommendation-engine"],
+    sha: "2c3d4e",
+    timestamp: "2026-02-16T11:00:00Z",
+  },
+  {
+    author: "priya",
+    branch: "main",
+    message: "feat: analytics pipeline stub",
+    serviceIds: ["analytics-service"],
+    sha: "7a8b9c",
+    timestamp: "2026-02-17T11:00:00Z",
+  },
+  {
+    author: "priya",
+    branch: "feat/rec-engine",
+    message: "feat: product similarity model",
+    serviceIds: ["recommendation-engine", "product-catalog"],
+    sha: "5f6a7b",
+    timestamp: "2026-02-19T08:00:00Z",
+  },
+  {
+    author: "alex",
+    branch: "feat/retry-logic",
+    message: "feat: exponential backoff on payment retries",
+    serviceIds: ["payment-service"],
+    sha: "f1a2b3",
+    timestamp: "2026-02-19T10:00:00Z",
+  },
+  {
+    author: "kai",
+    branch: "main",
+    eventId: "tl-003",
+    message: "chore: deploy API Gateway v2.8 with rate limiting",
+    serviceIds: ["gateway"],
+    sha: "2b7a41",
+    timestamp: "2026-02-20T09:15:00Z",
+  },
+  {
+    author: "alex",
+    branch: "feat/retry-logic",
+    message: "test: add retry logic unit tests",
+    serviceIds: ["payment-service"],
+    sha: "c4d5e6",
+    timestamp: "2026-02-21T09:00:00Z",
+  },
+  {
+    author: "marco",
+    branch: "main",
+    eventId: "tl-005",
+    message: "fix: inventory warehouse sync failure",
+    serviceIds: ["inventory-service"],
+    sha: "8e21af",
+    timestamp: "2026-02-21T03:30:00Z",
+  },
+  {
+    author: "priya",
+    branch: "main",
+    eventId: "tl-008",
+    message: "feat: user service RBAC caching v1.14",
+    serviceIds: ["user-service"],
+    sha: "3e9f21",
+    timestamp: "2026-02-21T16:00:00Z",
+  },
+  {
+    author: "alex",
+    branch: "feat/retry-logic",
+    eventId: "tl-006",
+    message: "merge: retry logic into main for order v4.1",
+    serviceIds: ["order-service", "payment-service"],
+    sha: "9f0a1b",
+    timestamp: "2026-02-22T09:20:00Z",
+  },
+  {
+    author: "kai",
+    branch: "main",
+    eventId: "tl-002",
+    message: "fix: Stripe API timeout — increase retry budget",
+    serviceIds: ["payment-service"],
+    sha: "d7c83e",
+    timestamp: "2026-02-22T14:30:00Z",
+  },
+  {
+    author: "priya",
+    branch: "feat/rec-engine",
+    message: "feat: cache invalidation for recommendations",
+    serviceIds: ["recommendation-engine", "cache"],
+    sha: "8b9c0d",
+    timestamp: "2026-02-22T11:00:00Z",
   },
 ];
 

@@ -105,5 +105,22 @@ export interface SystemEdgeData {
   [key: string]: unknown;
 }
 
+export interface GitBranch {
+  color: string;
+  mergeTimestamp?: string;
+  name: string;
+  originTimestamp?: string;
+}
+
+export interface GitCommit {
+  author: string;
+  branch: string;
+  eventId?: string;
+  message: string;
+  serviceIds: string[];
+  sha: string;
+  timestamp: string;
+}
+
 export type SystemNode = Node<SystemNodeData>;
 export type SystemEdge = Edge<SystemEdgeData>;

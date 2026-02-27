@@ -1,7 +1,7 @@
-import { X } from "lucide-react";
+import { GitBranch as GitBranchIcon, X } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { timelineEvents } from "@/data/system";
+import { gitBranches, gitCommits, timelineEvents } from "@/data/system";
 import type { TimelineEvent } from "@/data/types";
 import { useLayerStore } from "@/stores/layer-store";
 
@@ -543,6 +543,194 @@ function ZoomPill({
   );
 }
 
+// ── Git graph ──────────────────────────────────────────────────────────────────
+const GIT_GRAPH_H = 44;
+const SVG_W = PANEL_W - 56; // matches px-7 (28px) padding on each side
+const MAIN_Y = 32;
+const BRANCH_LANE_Y: Record<string, number> = {
+  "feat/rec-engine": 18,
+  "feat/retry-logic": 8,
+};
+
+interface GitCommitTooltip {
+  author: string;
+  message: string;
+  sha: string;
+  x: number;
+}
+
+function GitGraph({
+  activeBugEventId,
+  viewEnd,
+  viewStart,
+}: {
+  activeBugEventId: string | null;
+  viewEnd: number;
+  viewStart: number;
+}) {
+  const [tooltipCommit, setTooltipCommit] = useState<GitCommitTooltip | null>(
+    null
+  );
+
+  function tsToX(ts: string): number {
+    return (
+      (tToPercent(new Date(ts).getTime(), viewStart, viewEnd) / 100) * SVG_W
+    );
+  }
+
+  const bugLinkedShas = useMemo(() => {
+    if (!activeBugEventId) {
+      return new Set<string>();
+    }
+    return new Set(
+      gitCommits.filter((c) => c.eventId === activeBugEventId).map((c) => c.sha)
+    );
+  }, [activeBugEventId]);
+
+  return (
+    <div
+      className="relative border-white/[0.07] border-t"
+      style={{ height: GIT_GRAPH_H }}
+    >
+      {/* Subtle git branch icon in left gutter */}
+      <div className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 opacity-[0.18]">
+        <GitBranchIcon className="h-3 w-3 text-muted-foreground" />
+      </div>
+
+      {/* SVG graph area */}
+      <svg
+        aria-labelledby="git-graph-title"
+        height={GIT_GRAPH_H}
+        role="img"
+        style={{ left: 28, overflow: "hidden", position: "absolute", top: 0 }}
+        width={SVG_W}
+      >
+        <title id="git-graph-title">Git branch graph</title>
+        {/* Main branch horizontal line */}
+        <line
+          stroke="oklch(0.52 0.11 165 / 0.35)"
+          strokeWidth={1}
+          x1={0}
+          x2={SVG_W}
+          y1={MAIN_Y}
+          y2={MAIN_Y}
+        />
+
+        {/* Feature branch paths */}
+        {gitBranches
+          .filter((b) => b.name !== "main" && b.originTimestamp)
+          .map((branch) => {
+            const laneY = BRANCH_LANE_Y[branch.name] ?? 15;
+            const branchX = tsToX(branch.originTimestamp ?? "");
+            const mergeX = branch.mergeTimestamp
+              ? tsToX(branch.mergeTimestamp)
+              : SVG_W + 20;
+            const isMerged = !!branch.mergeTimestamp;
+            const Q = 12; // curve control offset
+            const runEnd = Math.max(branchX + Q, mergeX - Q);
+            let d = `M ${branchX},${MAIN_Y} Q ${branchX},${laneY} ${branchX + Q},${laneY} L ${runEnd},${laneY}`;
+            if (isMerged) {
+              d += ` Q ${mergeX},${laneY} ${mergeX},${MAIN_Y}`;
+            }
+            return (
+              <path
+                d={d}
+                fill="none"
+                key={branch.name}
+                stroke={branch.color}
+                strokeDasharray={isMerged ? undefined : "3 3"}
+                strokeOpacity={0.45}
+                strokeWidth={1}
+              />
+            );
+          })}
+
+        {/* Commit circles */}
+        {gitCommits.map((commit) => {
+          const x = tsToX(commit.timestamp);
+          if (x < -6 || x > SVG_W + 6) {
+            return null;
+          }
+          const y =
+            commit.branch === "main"
+              ? MAIN_Y
+              : (BRANCH_LANE_Y[commit.branch] ?? MAIN_Y);
+          const branchData = gitBranches.find((b) => b.name === commit.branch);
+          const color = branchData?.color ?? "oklch(0.52 0.11 165)";
+          const isBugLinked = bugLinkedShas.has(commit.sha);
+          const isEventLinked = !!commit.eventId;
+
+          return (
+            // biome-ignore lint/a11y/noStaticElementInteractions: SVG <g> has no semantic equivalent
+            <g
+              key={commit.sha}
+              onMouseEnter={() =>
+                setTooltipCommit({
+                  author: commit.author,
+                  message: commit.message,
+                  sha: commit.sha,
+                  x,
+                })
+              }
+              onMouseLeave={() => setTooltipCommit(null)}
+              style={{ cursor: "default" }}
+            >
+              {isBugLinked && (
+                <motion.circle
+                  animate={{ opacity: [0.65, 0], r: [5, 10] }}
+                  cx={x}
+                  cy={y}
+                  fill="none"
+                  stroke={KIND_COLOR.bug.fill}
+                  strokeWidth={1}
+                  transition={{
+                    duration: 1.1,
+                    repeat: Number.POSITIVE_INFINITY,
+                  }}
+                />
+              )}
+              <circle
+                cx={x}
+                cy={y}
+                fill={isEventLinked ? color : "oklch(0.10 0.02 240)"}
+                r={isEventLinked ? 3.5 : 2.5}
+                stroke={color}
+                strokeWidth={1.5}
+              />
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Commit hover tooltip */}
+      {tooltipCommit && (
+        <div
+          className="pointer-events-none absolute z-20 rounded border border-border/40 bg-card/98 px-2 py-1.5 shadow-xl backdrop-blur-sm"
+          style={{
+            bottom: GIT_GRAPH_H + 6,
+            left: Math.min(
+              Math.max(28 + tooltipCommit.x - 80, 8),
+              PANEL_W - 200
+            ),
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-[8px] text-muted-foreground/40">
+              {tooltipCommit.sha}
+            </span>
+            <span className="font-mono text-[8px] text-muted-foreground/30">
+              {tooltipCommit.author}
+            </span>
+          </div>
+          <p className="mt-0.5 max-w-[180px] truncate font-mono text-[9px] text-foreground/70">
+            {tooltipCommit.message}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 export function TimelinePanel() {
   const timelineOpen = useLayerStore((s) => s.timelineOpen);
@@ -608,6 +796,26 @@ export function TimelinePanel() {
 
   const isDefaultView =
     Math.abs(viewStart - absMin) < 1000 && Math.abs(viewEnd - absMax) < 1000;
+
+  // ── Space → toggle JUMP bar ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!timelineOpen) {
+      return;
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.code !== "Space") {
+        return;
+      }
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") {
+        return;
+      }
+      e.preventDefault();
+      setShowGoto((v) => !v);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [timelineOpen]);
 
   // ── Wheel zoom ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -922,6 +1130,17 @@ export function TimelinePanel() {
                 ))}
               </div>
 
+              {/* Git graph row */}
+              <GitGraph
+                activeBugEventId={
+                  activeTimelineEvent?.kind === "bug"
+                    ? activeTimelineEvent.id
+                    : null
+                }
+                viewEnd={viewEnd}
+                viewStart={viewStart}
+              />
+
               {/* GOTO bar (slides in above footer) */}
               <AnimatePresence>
                 {showGoto && (
@@ -970,7 +1189,7 @@ export function TimelinePanel() {
                 <div className="flex items-center gap-2">
                   {/* JUMP button */}
                   <button
-                    className="flex items-center gap-1 rounded border border-white/[0.08] px-1.5 py-0.5 font-mono text-[8px] text-muted-foreground/45 transition-all hover:border-white/[0.18] hover:text-muted-foreground/80"
+                    className="flex items-center gap-1.5 rounded border border-white/[0.08] px-1.5 py-0.5 font-mono text-[8px] text-muted-foreground/45 transition-all hover:border-white/[0.18] hover:text-muted-foreground/80"
                     onClick={() => setShowGoto((v) => !v)}
                     style={
                       showGoto
@@ -980,6 +1199,17 @@ export function TimelinePanel() {
                     type="button"
                   >
                     JUMP ›
+                    <kbd
+                      className="rounded px-[3px] py-px font-mono text-[7px] leading-none"
+                      style={{
+                        background: "oklch(1 0 0 / 0.05)",
+                        border: "1px solid oklch(1 0 0 / 0.1)",
+                        color: "inherit",
+                        opacity: 0.7,
+                      }}
+                    >
+                      space
+                    </kbd>
                   </button>
 
                   {activeTimelineEvent && (
