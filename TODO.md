@@ -116,8 +116,40 @@ UX considerations:
   - auto, with manual intervention in building layer
 - Plugins?
   Nop. Conflicts with business model. This actually simplifies design. But it does not mean to build a stupid unscalable monolith
-- How to massively improve performance?
-  Maybe we need to ditch ReacFlow and create our own implementation from scratch. Consider Rust over WASM (fr)
+
+### Performance: ReactFlow ceiling and radical alternatives
+
+ReactFlow renders every node and edge as a DOM element (React component). Each node is a `<div>` with full React lifecycle overhead. CSS shadows, gradients, animations compound the cost. DOM rendering is locked to the main thread. Practical limit: hundreds of nodes before needing heavy optimization. React Flow v12 (`@xyflow/react`) improved perf and added a framework-agnostic core (`@xyflow/system`), but **did not change the underlying DOM rendering architecture**. No public roadmap for Canvas/WebGL rendering.
+
+**What tools like Figma, Miro, tldraw use:**
+- Figma: C++/WASM compiled to WebGL, now migrating to WebGPU. React only for panels/toolbar. Tile-based GPU renderer with custom GLSL shaders.
+- Miro: Canvas 2D / WebGL (proprietary) + React UI shell.
+- tldraw: SVG + Canvas with React. Centralized culling system, direct DOM manipulation for perf. Reduces subscription overhead from O(N) to O(1).
+- Common pattern: **React for UI chrome, custom renderer for the canvas**. None render canvas content as DOM elements.
+
+**Upgrade path (ordered by effort):**
+
+1. **Optimize ReactFlow** (days) — Memoize nodes/edges, `React.memo`, simplify CSS, lazy-render off-screen nodes. Gets to ~500-1000 nodes. Sufficient for the current POC.
+
+2. **Switch to WebGL graph library** (weeks) — Sigma.js v3 (WebGL, handles ~100k edges), PixiJS + custom graph layer, or GoJS (Canvas 2D, thousands of nodes <2s at 60fps). You lose ReactFlow's built-in interactions and need to reimplement drag, selection, minimap. Sigma.js is purpose-built for graphs.
+
+3. **Hybrid: React shell + Canvas/WebGL engine** (months) — The Figma pattern. React handles timeline, layer controls, toolbars. A custom or library-based Canvas/WebGL renderer handles the node graph. Correct architecture for scaling to thousands of nodes with complex visual effects.
+
+4. **Hybrid: React + Rust/WASM canvas via wgpu** (months, higher risk) — Same as above but the canvas engine is Rust compiled to WASM via wgpu (Rust's GPU abstraction, compiles to WebGPU or WebGL2 in browser). Maximum performance. Only justified if you need compute-heavy operations (real-time layout algorithms, physics simulations) alongside rendering. Figma, Adobe Photoshop (web), AutoCAD (web), 1Password all ship Rust/WASM in production.
+
+5. **Tauri desktop app** (orthogonal) — Tauri v2 (stable since Oct 2024): 2.5-3MB bundle vs Electron's 80-120MB, 30-40MB idle RAM vs 200-300MB, <500ms startup. Could use wgpu natively (not through WASM) for full GPU access. But: uses OS WebView (inconsistent rendering across platforms), WebGPU support depends on OS WebView version, limits distribution to desktop — an IDP that needs browser access for sharing/collaboration loses a major benefit of being web-native.
+
+**Rust/WASM framework landscape (Feb 2026):**
+- Leptos 0.7: ~18.5k stars. Fine-grained reactivity, direct DOM (no VDOM). Most mature for web. Not yet 1.0.
+- Dioxus 0.7: ~23k stars. Virtual DOM + signals. Strongest for desktop/mobile. Hot-patching of Rust at runtime.
+- Yew 0.21: ~30.5k stars. Virtual DOM, React-like. Oldest, stable, but slower development pace.
+- All are **DOM-based** — none render to Canvas/WebGL natively. For Canvas/WebGL you'd use wgpu or Bevy separately.
+
+**WebGPU browser support (Jan 2026): full cross-browser.** Chrome/Edge since v113, Firefox Windows since v141, Safari macOS Tahoe 26 / iOS 26. ~70% global coverage. WebGL2 fallback path is trivial.
+
+**JS-WASM boundary cost:** Not zero. Small frequent calls can be slower than pure JS. But at 50-500 nodes, passing the entire graph state as a single serialized buffer per update is microseconds — negligible. SharedArrayBuffer (near-zero overhead) requires COOP/COEP headers.
+
+**Bottom line for Orray:** At 50-500 nodes ReactFlow is adequate with optimization (option 1). If the product scales to thousands of nodes or the animation/layer system hits DOM limits, the move is to option 2 (Sigma.js/PixiJS) or option 3 (Figma-pattern hybrid). Rust/WASM (option 4) is the nuclear option — technically correct at Figma scale, but overkill until node counts reach thousands with complex per-frame effects.
 
 ### Market situation
 
