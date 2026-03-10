@@ -98,23 +98,19 @@ export function EnvDiffCanvas() {
     }
     setIsAnimating(true);
 
-    const next: "graph" | "env" = mode === "graph" ? "env" : "graph";
+    const rotationOpts = { duration: 0.85, ease: [0.3, 0, 0.7, 1] } as const;
 
-    // Switch mode — framer-motion starts animating nodes to new positions
-    setMode(next);
-
-    // Full 90° rotation: upper Y goes back (into screen), lower Y comes forward
-    // For reverse: opposite direction
-    const target = next === "env" ? 90 : -90;
-
-    await animate(
-      scope.current,
-      { rotateX: target },
-      { duration: 0.85, ease: [0.4, 0, 0.6, 1] }
-    );
-
-    // At edge-on (invisible) — snap back to flat with new layout in place
-    await animate(scope.current, { rotateX: 0 }, { duration: 0 });
+    if (mode === "graph") {
+      // Forward: switch layout, then rotate to hide transition
+      setMode("env");
+      await animate(scope.current, { rotateX: 90 }, rotationOpts);
+      await animate(scope.current, { rotateX: 0 }, { duration: 0 });
+    } else {
+      // Reverse: rotate to hide env view FIRST, then switch layout
+      await animate(scope.current, { rotateX: -90 }, rotationOpts);
+      setMode("graph");
+      await animate(scope.current, { rotateX: 0 }, { duration: 0 });
+    }
 
     setIsAnimating(false);
   }, [mode, isAnimating, animate, scope]);
@@ -184,7 +180,7 @@ export function EnvDiffCanvas() {
                   key={`${edge.from}-${edge.to}`}
                   stroke="oklch(0.32 0.02 270)"
                   strokeWidth={1.5}
-                  transition={{ duration: 0.25 }}
+                  transition={{ duration: 0.25, delay: isEnv ? 0 : 0.45 }}
                   x1={from.x}
                   x2={to.x}
                   y1={from.y}
@@ -227,7 +223,7 @@ export function EnvDiffCanvas() {
                 transition={{
                   left: { duration: 0.75, ease: [0.4, 0, 0.15, 1] },
                   top: { duration: 0.75, ease: [0.4, 0, 0.15, 1] },
-                  opacity: { duration: 0.25 },
+                  opacity: { duration: 0.25, delay: isEnv ? 0 : 0.3 },
                   scale: { duration: 0.25 },
                 }}
               >
@@ -267,7 +263,7 @@ export function EnvDiffCanvas() {
                       height: pos.y - 20,
                       transform: "translateX(-50%)",
                     }}
-                    transition={{ duration: 0.3, delay: 0.5 + i * 0.04 }}
+                    transition={{ duration: 0.3, delay: 0.88 + i * 0.04 }}
                   >
                     {/* Spacer pushes cards + stem to the bottom */}
                     <div className="flex-1" />
@@ -287,7 +283,7 @@ export function EnvDiffCanvas() {
                           }}
                           transition={{
                             // prod first (closest to node), ripple upward to dev
-                            delay: 0.6 + i * 0.04 + (count - 1 - j) * 0.1,
+                            delay: 0.9 + i * 0.04 + (count - 1 - j) * 0.1,
                             duration: 0.35,
                             ease: [0, 0, 0.2, 1],
                           }}
@@ -316,7 +312,7 @@ export function EnvDiffCanvas() {
                       className="mt-2 h-3 w-px origin-bottom"
                       initial={{ scaleY: 0 }}
                       style={{ background: "oklch(0.3 0.02 270)" }}
-                      transition={{ delay: 0.55 + i * 0.04, duration: 0.25 }}
+                      transition={{ delay: 0.88 + i * 0.04, duration: 0.25 }}
                     />
                   </motion.div>
                 );
