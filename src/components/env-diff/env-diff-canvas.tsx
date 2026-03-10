@@ -153,57 +153,53 @@ export function EnvDiffCanvas() {
       </div>
 
       {/* 3D scene */}
-      <div
-        className="relative flex-1 overflow-hidden"
-        style={{ perspective: "1200px" }}
-      >
-        {/* Rotating wrapper */}
+      <div className="relative flex-1 overflow-hidden">
         <div
           className="relative mx-auto h-full w-full max-w-[900px]"
-          ref={scope}
-          style={{ transformStyle: "preserve-3d" }}
+          style={{ perspective: "1200px" }}
         >
-          {/* ── Graph edges ── */}
-          <svg
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full"
-          >
-            {GRAPH_EDGES.map((edge) => {
-              const from = nodeById(edge.from);
-              const to = nodeById(edge.to);
-              if (!(from && to)) {
-                return null;
-              }
-              return (
-                <motion.line
-                  animate={{ opacity: isEnv ? 0 : 1 }}
-                  key={`${edge.from}-${edge.to}`}
-                  stroke="oklch(0.32 0.02 270)"
-                  strokeWidth={1.5}
-                  transition={{ duration: 0.25, delay: isEnv ? 0 : 0.45 }}
-                  x1={from.x}
-                  x2={to.x}
-                  y1={from.y}
-                  y2={to.y}
-                />
-              );
-            })}
+          {/* ── Rotating layer: graph surface (edges only) ── */}
+          <div className="pointer-events-none absolute inset-0" ref={scope}>
+            <svg aria-hidden="true" className="h-full w-full">
+              {GRAPH_EDGES.map((edge) => {
+                const from = nodeById(edge.from);
+                const to = nodeById(edge.to);
+                if (!(from && to)) {
+                  return null;
+                }
+                return (
+                  <motion.line
+                    animate={{ opacity: isEnv ? 0 : 1 }}
+                    key={`${edge.from}-${edge.to}`}
+                    stroke="oklch(0.32 0.02 270)"
+                    strokeWidth={1.5}
+                    transition={{ duration: 0.25, delay: isEnv ? 0 : 0.45 }}
+                    x1={from.x}
+                    x2={to.x}
+                    y1={from.y}
+                    y2={to.y}
+                  />
+                );
+              })}
 
-            {/* Env-mode: horizontal dashed connector on the X line */}
-            <motion.line
-              animate={{ opacity: isEnv ? 1 : 0 }}
-              stroke="oklch(0.28 0.02 270)"
-              strokeDasharray="6 4"
-              strokeWidth={1}
-              transition={{ duration: 0.3, delay: isEnv ? 0.5 : 0 }}
-              x1={130}
-              x2={760}
-              y1={ENV_LINE_Y}
-              y2={ENV_LINE_Y}
-            />
-          </svg>
+              {/* Env-mode: horizontal dashed connector on the X line */}
+              <motion.line
+                animate={{ opacity: isEnv ? 1 : 0 }}
+                stroke="oklch(0.28 0.02 270)"
+                strokeDasharray="6 4"
+                strokeWidth={1}
+                transition={{ duration: 0.3, delay: isEnv ? 0.5 : 0 }}
+                x1={130}
+                x2={760}
+                y1={ENV_LINE_Y}
+                y2={ENV_LINE_Y}
+              />
+            </svg>
+          </div>
 
-          {/* ── All nodes (hero-animate between graph pos ↔ env line) ── */}
+          {/* ── Flat layer: nodes, env cards, labels (never rotated) ── */}
+
+          {/* All nodes (hero-animate between graph pos ↔ env line) */}
           {GRAPH_NODES.map((node) => {
             const selected = SELECTED_IDS.includes(node.id);
             const envPos = ENV_LINE[node.id];
@@ -237,7 +233,7 @@ export function EnvDiffCanvas() {
             );
           })}
 
-          {/* ── Env version cards ABOVE nodes (z-axis points up) ── */}
+          {/* Env version cards ABOVE nodes (z-axis points up) */}
           <AnimatePresence>
             {isEnv &&
               SELECTED_IDS.map((id, i) => {
@@ -246,7 +242,6 @@ export function EnvDiffCanvas() {
                   return null;
                 }
                 const versions = ENV_VERSIONS[id] ?? [];
-                // Reverse so dev is at top, prod at bottom (closest to node)
                 const reversed = [...versions].reverse();
                 const count = reversed.length;
 
@@ -265,10 +260,8 @@ export function EnvDiffCanvas() {
                     }}
                     transition={{ duration: 0.3, delay: 0.88 + i * 0.04 }}
                   >
-                    {/* Spacer pushes cards + stem to the bottom */}
                     <div className="flex-1" />
 
-                    {/* Cards: dev(top) → staging → prod(bottom, closest to node) */}
                     <div className="flex flex-col gap-2.5">
                       {reversed.map((v, j) => (
                         <motion.div
@@ -282,7 +275,6 @@ export function EnvDiffCanvas() {
                             boxShadow: `0 2px 12px oklch(0.3 0.1 ${v.hue} / 0.15)`,
                           }}
                           transition={{
-                            // prod first (closest to node), ripple upward to dev
                             delay: 0.9 + i * 0.04 + (count - 1 - j) * 0.1,
                             duration: 0.35,
                             ease: [0, 0, 0.2, 1],
@@ -306,7 +298,6 @@ export function EnvDiffCanvas() {
                       ))}
                     </div>
 
-                    {/* Vertical stem connecting cards to node */}
                     <motion.div
                       animate={{ scaleY: 1 }}
                       className="mt-2 h-3 w-px origin-bottom"
@@ -319,7 +310,7 @@ export function EnvDiffCanvas() {
               })}
           </AnimatePresence>
 
-          {/* ── Axis labels ── */}
+          {/* Axis labels */}
           <div className="absolute inset-x-0 bottom-4 text-center text-[10px] text-muted-foreground/50 uppercase tracking-[0.25em]">
             x axis
           </div>
